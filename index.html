@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Nokia Snake Multiplayer (Bots)</title>
+<style>
+  body { background: #000; margin: 0; display: flex; justify-content: center; align-items: center; height: 100vh; }
+  canvas { background: #fff; image-rendering: pixelated; }
+</style>
+</head>
+<body>
+<canvas id="game" width="600" height="400"></canvas>
+<script>
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+const tileSize = 20;
+const width = canvas.width / tileSize;
+const height = canvas.height / tileSize;
+
+// Player snake
+let snakes = [
+  { x: 5, y: 5, dx: 1, dy: 0, color: "green", body: [{x:5,y:5}], isBot:false },
+  { x: 15, y: 15, dx: 0, dy: 1, color: "blue", body: [{x:15,y:15}], isBot:true },
+  { x: 25, y: 10, dx: 0, dy: -1, color: "purple", body: [{x:25,y:10}], isBot:true }
+];
+
+let foods = [{ x: 10, y: 10 }, { x: 20, y: 15 }];
+
+// Draw function
+function draw() {
+  ctx.fillStyle = "#fff";
+  ctx.fillRect(0,0,canvas.width,canvas.height);
+
+  // Draw foods
+  ctx.fillStyle = "red";
+  for (let f of foods) {
+    ctx.fillRect(f.x*tileSize,f.y*tileSize,tileSize,tileSize);
+  }
+
+  // Draw snakes
+  for (let s of snakes) {
+    ctx.fillStyle = s.color;
+    for (let b of s.body) {
+      ctx.fillRect(b.x*tileSize,b.y*tileSize,tileSize,tileSize);
+    }
+  }
+}
+
+// Update function
+function update() {
+  for (let s of snakes) {
+    // AI movement
+    if (s.isBot) {
+      // move toward closest food
+      let target = foods.reduce((a,b) => 
+        Math.abs(b.x-s.x)+Math.abs(b.y-s.y) < Math.abs(a.x-s.x)+Math.abs(a.y-s.y)?b:a
+      );
+      s.dx = target.x > s.x ? 1 : target.x < s.x ? -1 : 0;
+      s.dy = target.y > s.y ? 1 : target.y < s.y ? -1 : 0;
+    }
+
+    s.x += s.dx;
+    s.y += s.dy;
+
+    // big map wrapping
+    if (s.x < 0) s.x = width-1;
+    if (s.x >= width) s.x = 0;
+    if (s.y < 0) s.y = height-1;
+    if (s.y >= height) s.y = 0;
+
+    s.body.push({x:s.x,y:s.y});
+
+    // Check food
+    for (let i=0;i<foods.length;i++){
+      if (s.x===foods[i].x && s.y===foods[i].y){
+        foods.splice(i,1);
+        foods.push({x:Math.floor(Math.random()*width),y:Math.floor(Math.random()*height)});
+      }
+    }
+
+    // Keep snake length
+    if (s.body.length > 10) s.body.shift();
+  }
+
+  // Check collisions between snakes
+  for (let i=0;i<snakes.length;i++){
+    for (let j=0;j<snakes.length;j++){
+      if(i===j) continue;
+      let head = snakes[i].body[snakes[i].body.length-1];
+      let body = snakes[j].body;
+      for (let k=0;k<body.length;k++){
+        if(head.x===body[k].x && head.y===body[k].y){
+          // Reset the snake hit
+          snakes[i].body = [{x:Math.floor(Math.random()*width),y:Math.floor(Math.random()*height)}];
+          snakes[i].x = snakes[i].body[0].x;
+          snakes[i].y = snakes[i].body[0].y;
+        }
+      }
+    }
+  }
+}
+
+// Controls
+document.addEventListener("keydown", e=>{
+  let p = snakes[0];
+  if(e.key==="ArrowUp" && p.dy===0){p.dx=0;p.dy=-1;}
+  if(e.key==="ArrowDown" && p.dy===0){p.dx=0;p.dy=1;}
+  if(e.key==="ArrowLeft" && p.dx===0){p.dx=-1;p.dy=0;}
+  if(e.key==="ArrowRight" && p.dx===0){p.dx=1;p.dy=0;}
+});
+
+// Game loop
+function loop(){
+  update();
+  draw();
+  requestAnimationFrame(loop);
+}
+loop();
+</script>
+</body>
+</html>
